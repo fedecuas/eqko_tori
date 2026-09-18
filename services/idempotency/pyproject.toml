@@ -1,0 +1,17 @@
+[project]
+name = "tori-idempotency"
+version = "0.1.0"
+description = "Capa de idempotencia de TORI — dedupe de negocios por place_id en Redis"
+requires-python = ">=3.11"
+dependencies = ["redis>=5.0,<6.0"]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0", "fakeredis>=2.23"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["idempotency*"]

@@ -1,0 +1,17 @@
+[project]
+name = "tori-seda-consumer"
+version = "0.1.0"
+description = "Loop genérico de consumer group de Redis Streams (retry exponencial con jitter + DLQ) — compartido entre etapas del Agent Stage y el Dispatcher de TORI"
+requires-python = ">=3.11"
+dependencies = ["redis>=5.0,<6.0", "tori-shared-types"]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0", "fakeredis>=2.23"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tori_seda_consumer*"]

@@ -1,0 +1,21 @@
+# Secretos reales — nunca a git, ver TORI-CREDENTIALS.md
+TORI-CREDENTIALS.md
+.env
+.env.local
+.env.*.local
+services/**/.env
+apps/**/.env
+
+# Dependencias / build
+node_modules/
+.next/
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Editor / OS
+.DS_Store

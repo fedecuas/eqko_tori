@@ -1,0 +1,30 @@
+[project]
+name = "tori-agent-worker"
+version = "0.1.0"
+description = "Agent Stage de TORI — consumidor stateless de leadgen.place_extracted (Módulo 3: filtro + E.164; Módulo 4: Gemini/RAG)"
+requires-python = ">=3.11"
+dependencies = [
+    "redis>=5.0,<6.0",
+    "phonenumbers>=8.13",
+    "pydantic-settings>=2.2",
+    "tori-idempotency",
+    "tori-seda-consumer",
+]
+
+[project.optional-dependencies]
+# litellm y langfuse entran en test porque test_brain.py/test_tracing.py mockean sus
+# clientes (igual que test_places_client.py de extractor mockea httpx) — nunca pegan a una
+# API real.
+test = ["pytest>=8.0", "fakeredis>=2.23", "litellm>=1.40", "langfuse>=2.0"]
+# Solo hace falta para correr agent-worker/draft_main.py contra Gemini/Postgres reales.
+llm = ["litellm>=1.40"]
+postgres = ["psycopg[binary]>=3.1"]
+observability = ["langfuse>=2.0"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agent_worker*"]

@@ -1,0 +1,24 @@
+[project]
+name = "tori-dispatcher"
+version = "0.1.0"
+description = "Dispatcher de TORI — escribe leads calificados+redactados a Airtable/Sheets/CRM del tenant, con rate limiting y upsert idempotente por place_id"
+requires-python = ">=3.11"
+dependencies = [
+    "redis>=5.0,<6.0",
+    "httpx>=0.27",
+    "pydantic-settings>=2.2",
+    "tori-idempotency",
+    "tori-seda-consumer",
+    "tori-shared-types",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0", "fakeredis>=2.23"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dispatcher*"]

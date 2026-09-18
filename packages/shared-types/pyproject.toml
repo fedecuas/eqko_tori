@@ -1,0 +1,14 @@
+[project]
+name = "tori-shared-types"
+version = "0.1.0"
+description = "Contratos compartidos entre los servicios del pipeline SEDA de TORI"
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2.6"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tori_shared_types*"]
