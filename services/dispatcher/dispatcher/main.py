@@ -58,11 +58,15 @@ def _build_output_router(settings: Settings) -> StaticOutputRouter:
     # evento levanta ValueError (a la DLQ), no falla en silencio.
     outputs_by_tenant: dict[str, LeadOutput] = {}
     if settings.airtable_access_token and settings.airtable_base_id:
-        outputs_by_tenant["alba"] = AirtableOutput(
+        shared_airtable = AirtableOutput(
             access_token=settings.airtable_access_token,
             base_id=settings.airtable_base_id,
             table_name=settings.airtable_table_name,
         )
+        # "fredy" comparte la misma base/tabla que "alba" a propósito (decisión 2026-09-18,
+        # sin base separada todavía) — mismo objeto de output, no una config duplicada.
+        outputs_by_tenant["alba"] = shared_airtable
+        outputs_by_tenant["fredy"] = shared_airtable
     return StaticOutputRouter(outputs_by_tenant)
 
 

@@ -37,7 +37,9 @@ def build_dependencies(settings: Settings) -> WorkerDependencies:
         examples_repository=PostgresMessageExamplesRepository(
             connection, LiteLLMEmbedder(model=settings.embedding_model, api_key=settings.gemini_api_key)
         ),
-        drafter=LiteLLMMessageDrafter(model=settings.gemini_model, api_key=settings.gemini_api_key),
+        drafter=LiteLLMMessageDrafter(
+            model=settings.gemini_model, api_key=settings.gemini_api_key, sender_name=settings.sender_name
+        ),
         idempotency_store=IdempotencyStore(redis_client),
         publisher=DraftedMessagePublisher(redis_client),
         examples_limit=settings.rag_examples_limit,

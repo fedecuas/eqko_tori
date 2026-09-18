@@ -14,6 +14,10 @@ negocios locales sin sitio web. Respondé SIEMPRE con un JSON válido de la form
 propia (no genérico).
 - message_text: el mensaje de WhatsApp/llamada, corto, directo, sin sonar a spam, mencionando \
 el nombre del negocio. En español, tono cercano.
+- El remitente del mensaje viene indicado en el prompt de usuario ("Firmá de parte de: ..."). \
+Usalo tal cual — NUNCA dejes un placeholder sin rellenar como "[Tu Nombre]" o "[Nombre]". Si el \
+remitente es una organización (ej. "EQKO") y no una persona, no inventes un nombre propio: \
+escribí "Soy de EQKO", no "Soy [Tu Nombre] de EQKO".
 
 Los ejemplos de mensajes exitosos que te pasen son referencia de tono — no los copies literal."""
 
@@ -40,9 +44,15 @@ class LiteLLMMessageDrafter(MessageDrafter):
     propios campos, no hacia `os.environ` — litellm nunca vería `GEMINI_API_KEY` si dependiera
     de leerlo del entorno del proceso. Confirmado corriendo esto contra Gemini real."""
 
-    def __init__(self, model: str = "gemini/gemini-2.5-flash", api_key: str | None = None):
+    def __init__(
+        self,
+        model: str = "gemini/gemini-2.5-flash",
+        api_key: str | None = None,
+        sender_name: str = "EQKO",
+    ):
         self._model = model
         self._api_key = api_key
+        self._sender_name = sender_name
 
     def draft(self, lead: LeadQualifiedEvent, examples: list[MessageExample]) -> DraftResult:
         import litellm  # import perezoso: no forzar litellm en quien solo usa el stub en tests
@@ -52,7 +62,7 @@ class LiteLLMMessageDrafter(MessageDrafter):
             api_key=self._api_key,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": _build_user_prompt(lead, examples)},
+                {"role": "user", "content": _build_user_prompt(lead, examples, self._sender_name)},
             ],
             response_format={"type": "json_object"},
         )
@@ -69,11 +79,12 @@ class LiteLLMMessageDrafter(MessageDrafter):
         )
 
 
-def _build_user_prompt(lead: LeadQualifiedEvent, examples: list[MessageExample]) -> str:
+def _build_user_prompt(lead: LeadQualifiedEvent, examples: list[MessageExample], sender_name: str) -> str:
     lines = [
         f"Negocio: {lead.display_name}",
         f"Dirección: {lead.formatted_address or 'sin dato'}",
         f"Teléfono: {lead.phone_e164}",
+        f"Firmá de parte de: {sender_name}",
     ]
     if examples:
         lines.append("\nMensajes exitosos previos (referencia de tono, no copiar literal):")

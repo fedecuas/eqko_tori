@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini/gemini-2.5-flash"
     embedding_model: str = "gemini/gemini-embedding-001"
     rag_examples_limit: int = 3
+    # De parte de quién se firma el mensaje redactado — sin esto Gemini a veces dejaba un
+    # placeholder sin rellenar ("Soy [Tu Nombre] de EQKO"). Un solo valor global por ahora,
+    # no por tenant (mismo patrón que AIRTABLE_* en dispatcher, hasta que exista
+    # packages/database).
+    sender_name: str = "EQKO"
 
     # Módulo 6 — opcional: sin configurar, DraftHandler usa NullTracer y sigue funcionando.
     langfuse_public_key: str | None = None
