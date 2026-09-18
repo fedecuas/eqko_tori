@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  python-tests:
+    name: Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # Orden de instalación importante: cada paquete depende localmente (editable) de los
+      # anteriores, no hay versiones publicadas en PyPI. Ver CLAUDE.md sección 4.
+      - name: Install shared packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ./packages/shared-types
+          pip install -e "./packages/seda-consumer[test]"
+          pip install -e "./services/idempotency[test]"
+
+      - name: Install services
+        run: |
+          pip install -e "./services/extractor[test]"
+          pip install -e "./services/agent-worker[test]"
+          pip install -e "./services/site-generator[test]"
+          pip install -e "./services/approval-gate[test]"
+          pip install -e "./services/dispatcher[test]"
+
+      # Cada paquete corre pytest desde su propio directorio (no desde la raíz) porque varios
+      # servicios reusan nombres de módulo (config, main) que colisionarían en un solo import root.
+      # Todas las suites usan fakeredis / httpx.MockTransport / litellm y langfuse mockeados —
+      # no requieren secrets reales ni servicios externos levantados.
+      - name: Run tests
+        run: |
+          set -e
+          for dir in \
+            packages/seda-consumer \
+            services/idempotency \
+            services/extractor \
+            services/agent-worker \
+            services/site-generator \
+            services/approval-gate \
+            services/dispatcher; do
+            echo "::group::pytest $dir"
+            (cd "$dir" && python -m pytest -q)
+            echo "::endgroup::"
+          done
+
+  dashboard-build:
+    name: Dashboard build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: apps/dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # No hay ESLint configurado en este proyecto todavía (next lint pediría un setup
+      # interactivo, imposible en CI) — next build ya corre el type-check de TypeScript,
+      # que es la verificación real que existía antes de este workflow.
+      # No hay secrets reales configurados en el repo (ni deberían estarlo). page.tsx fuerza
+      # rendering dinámico (usa searchParams + fetch con cache: "no-store"), así que Next no
+      # llama a getConfig() durante el build — placeholders alcanzan para que no explote si
+      # eso cambiara en el futuro.
+      - name: Build
+        env:
+          EXTRACTOR_URL: http://localhost:8000
+          EXTRACTOR_INTERNAL_API_KEY: ci-placeholder
+          APPROVAL_GATE_URL: http://localhost:8001
+          APPROVAL_GATE_INTERNAL_API_KEY: ci-placeholder
+        run: npm run build
