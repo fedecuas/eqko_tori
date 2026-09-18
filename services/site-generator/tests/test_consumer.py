@@ -10,6 +10,7 @@ from tori_shared_types import (
     dlq_stream_name,
 )
 
+from site_generator.builder import StaticSiteBuilder
 from site_generator.handler import SiteGenerationHandler
 from site_generator.quota import WeeklyQuota
 from site_generator.store import SiteDeploymentStore
@@ -33,6 +34,7 @@ EVENT_KWARGS = dict(
 def _deps(redis_client, deployer):
     handler = SiteGenerationHandler(
         deployer=deployer,
+        site_builder=StaticSiteBuilder(),
         quota=WeeklyQuota(redis_client, max_per_week=50),
         deployment_store=SiteDeploymentStore(redis_client),
         idempotency_store=IdempotencyStore(redis_client),

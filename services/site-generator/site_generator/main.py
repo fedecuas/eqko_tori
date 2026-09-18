@@ -5,15 +5,37 @@ from redis import Redis
 from tori_seda_consumer import WorkerDependencies, run_cycle
 from tori_shared_types import STREAM_MESSAGE_DRAFTED
 
+from .builder import AiSiteBuilder, GeminiSiteWriter, SiteBuilder, StaticSiteBuilder
 from .config import Settings
 from .deploy import VercelDeployer
 from .handler import SiteGenerationHandler
+from .photos import GooglePlacesPhotosProvider, NoPhotosProvider
 from .quota import WeeklyQuota
 from .store import SiteDeploymentStore
 from .streams import SiteGeneratedPublisher
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def _build_site_builder(settings: Settings) -> SiteBuilder:
+    if not settings.gemini_api_key:
+        logger.warning("sin GEMINI_API_KEY: sitios con la plantilla fija, sin IA ni fotos")
+        return StaticSiteBuilder()
+
+    photos_enabled = bool(settings.google_places_api_key and settings.google_places_public_key)
+    if not photos_enabled:
+        logger.warning("fotos deshabilitadas: faltan GOOGLE_PLACES_API_KEY y/o GOOGLE_PLACES_PUBLIC_KEY")
+    provider = (
+        GooglePlacesPhotosProvider(settings.google_places_api_key, max_photos=settings.max_photos)
+        if photos_enabled
+        else NoPhotosProvider()
+    )
+    return AiSiteBuilder(
+        writer=GeminiSiteWriter(model=settings.site_gen_model, api_key=settings.gemini_api_key),
+        photos_provider=provider,
+        public_key=settings.google_places_public_key if photos_enabled else None,
+    )
 
 
 def build_dependencies(settings: Settings) -> WorkerDependencies:
@@ -25,6 +47,7 @@ def build_dependencies(settings: Settings) -> WorkerDependencies:
     )
     handler = SiteGenerationHandler(
         deployer=deployer,
+        site_builder=_build_site_builder(settings),
         quota=WeeklyQuota(redis_client, max_per_week=settings.weekly_quota),
         deployment_store=SiteDeploymentStore(redis_client),
         idempotency_store=IdempotencyStore(redis_client),

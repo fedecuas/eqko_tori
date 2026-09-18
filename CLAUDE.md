@@ -159,7 +159,8 @@ resultado de negocio sin heredar esos riesgos.
 | B — Consentimiento del dueño del negocio | Se publica un sitio con su marca sin que lo haya pedido | Sí, es lo que hay que diseñar |
 
 **Mitigación implementada:**
-- Capa A: el teaser (`site_generator/template.py`) usa solo datos factuales (nombre, teléfono); rating opcional como cita, nunca el texto de una review; cero fotos de Places.
+- Capa A: el teaser usa solo datos factuales (nombre, teléfono); nunca el texto de una review. **Fotos de Places (agregado 2026-09-18, decisión del usuario):** sí se permiten, pero solo enlazadas en vivo — el `<img src>` apunta al endpoint de Google (`places.googleapis.com/v1/{photo}/media`) para que el browser del visitante las pida cada vez; nunca se descargan ni se hostean (los Términos prohíben cachear/guardar contenido de Places). Atribución obligatoria del autor + link a Google Maps, la inyecta el sistema, no el LLM (`site_generator/builder.py`). Requiere una key **pública** de Places restringida por HTTP referrer (`GOOGLE_PLACES_PUBLIC_KEY`), distinta de la key de servidor — va expuesta en el HTML.
+- **Sitio generado con Gemini (`AiSiteBuilder`):** Gemini escribe el HTML, pero nunca se despliega crudo — `compose_site` lo audita (sin `<script>`/`<form>`/`<img>` propios/enlaces externos/`url()` en CSS) y rechaza afirmaciones inventadas sobre el negocio ("por generaciones", "años de experiencia"); el sistema inyecta `noindex`, el disclaimer literal y la atribución. Si el HTML sigue inválido tras 2 intentos, degrada a la plantilla fija (`template.py`) — el lead nunca se pierde. Sin `GEMINI_API_KEY` usa la plantilla fija.
 - Capa B: disclaimer literal acordado en la validación (`template.DISCLAIMER`), `noindex, nofollow` siempre, slug hash — no el nombre del negocio (`deploy.slug_for`) —, auto-expira a los 14 días (`expiry_main.py` borra el deployment de Vercel), el link lo manda un humano por WhatsApp igual que el mensaje hoy, y el gate de aprobación humana (`approval-gate`) revisa mensaje + sitio juntos antes de aprobar.
 
 **Dónde se inserta en el pipeline:**
@@ -203,9 +204,9 @@ Límite de 50/semana enforced en código (`WeeklyQuota`, ventana ISO por semana 
 alcanza con confiarlo a que el operador no dispare más runs.
 
 **Implementado y verificado de punta a punta contra Vercel real (2026-09-18)** —
-`services/site-generator` (25 tests) + cambios en cascada a `services/approval-gate` (consume
+`services/site-generator` (25 tests, hoy 66 con builder + fotos) + cambios en cascada a `services/approval-gate` (consume
 `site_generated`, propaga `landing_url`) y `services/dispatcher` (columna `landing_url` en
-Airtable/Sheets). 101 tests en el repo entero.
+Airtable/Sheets). 142 tests en el repo entero.
 
 Verificación real destapó **tres problemas** que ningún test mockeado iba a atrapar — detalle
 completo en `TORI-CREDENTIALS.md` sección Vercel:
@@ -393,7 +394,7 @@ Sin resolver, no bloquea nada: `APIFY_API_TOKEN` (alternativa a Places, no hizo 
 `approval-gate`. Parámetros aprobados: sin opt-in previo del negocio (el gate humano interno
 alcanza), límite de 50 leads/semana enforced en código, baja gestionada por el mismo canal de
 contacto. Cambios en cascada a `approval-gate` (consume `site_generated`, no `message_drafted`)
-y `dispatcher` (columna `landing_url`). 101 tests en el repo entero.
+y `dispatcher` (columna `landing_url`). 101 tests en el repo entero (142 tras el sitio con Gemini + fotos, ver sección 9).
 
 Corrida real contra Vercel destapó 3 problemas reales (permiso de creación de proyecto,
 `ssoProtection` bloqueando el acceso público — el que más importaba, rompía el propósito

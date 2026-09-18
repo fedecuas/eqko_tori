@@ -15,8 +15,13 @@ Este módulo se diseñó explícitamente alrededor de un problema de consentimie
 y el [documento de validación](https://claude.ai/artifact/2jC2A79wHtaJTQhjCJPCoF). Reglas que no
 son negociables sin volver a pasar por esa validación:
 
-- **Cero fotos ni texto de reviews de Google Places** en el teaser — solo datos factuales
-  (nombre, teléfono) y, opcionalmente, rating como cita con link a la ficha real.
+- **Cero texto de reviews de Google Places.** Fotos de Places: sí (decisión 2026-09-18), pero
+  **solo enlazadas en vivo** — `<img src>` directo a `places.googleapis.com`, nunca descargadas ni
+  hosteadas (los Términos prohíben guardar contenido de Places), con la atribución del autor y el
+  link a Google Maps que inyecta el sistema (`builder.compose_site`), no el LLM.
+- **El HTML de Gemini nunca se despliega crudo** — `compose_site` lo audita y lo rechaza si trae
+  scripts/forms/imágenes propias/enlaces externos, placeholders sin rellenar o afirmaciones
+  inventadas sobre el negocio; tras 2 intentos degrada a la plantilla fija.
 - **`noindex, nofollow` siempre**, slug hash (no el nombre del negocio) — ver `deploy.slug_for`.
 - **El texto de `template.DISCLAIMER` es literal**, acordado en la validación — la baja se
   gestiona por el mismo canal de contacto, no una dirección separada.
@@ -28,8 +33,14 @@ son negociables sin volver a pasar por esa validación:
 - `quota.py` — `WeeklyQuota`, cupo semanal en Redis. A diferencia de `RateLimiter` en
   `dispatcher`, no bloquea/espera: agotar el cupo es una decisión de negocio, no un error
   transitorio.
-- `template.py` — plantilla única genérica (no por categoría — simplificación de v1 documentada
-  en el diseño, ver `CLAUDE.md` sección 9).
+- `builder.py` — `AiSiteBuilder` (Gemini escribe el HTML, `compose_site` lo audita e inyecta
+  `noindex`, disclaimer, atribución y las fotos), `StaticSiteBuilder` (plantilla fija, sin
+  `GEMINI_API_KEY`). Verificado contra Gemini y Places reales (2026-09-18), en el navegador.
+- `photos.py` — `GooglePlacesPhotosProvider`: pide en vivo solo los metadatos de las fotos
+  (nombre del recurso + atribución). Un error de red degrada a "sin fotos", no pierde el lead.
+  Necesita `GOOGLE_PLACES_API_KEY` (servidor) **y** `GOOGLE_PLACES_PUBLIC_KEY` (expuesta en el
+  HTML, restringida por referrer) — ver `TORI-CREDENTIALS.md`.
+- `template.py` — plantilla fija genérica, también es el fallback de `AiSiteBuilder`.
 - `deploy.py` — `VercelDeployer`. `⚠️ sin probar contra la API real` — requiere `VERCEL_TOKEN`.
 - `store.py` — `SiteDeploymentStore`: idempotencia de negocio (reusar el deployment existente de
   un `place_id` en vez de re-deployar) + índice para `expiry_main.py`.
@@ -54,7 +65,7 @@ python -m site_generator.expiry_main     # cron, correr una vez al día (ej. cro
 
 ## Tests
 
-25 tests, todo mockeado (`fakeredis`, `httpx.MockTransport`, un deployer falso) — nunca pega a
+66 tests, todo mockeado (`fakeredis`, `httpx.MockTransport`, un deployer y un LLM falsos) — nunca pega a
 Redis ni Vercel reales. Cubre: cupo semanal (independiente por semana ISO), reuso de deployment
 existente (no re-deploya en redelivery), degradación sin sitio cuando se agota el cupo (el evento
 igual se publica), la plantilla (disclaimer literal, `noindex`, sin texto de reviews, escapeo de

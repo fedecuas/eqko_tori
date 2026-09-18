@@ -6,6 +6,7 @@ from idempotency import IdempotencyStore
 from tori_seda_consumer import CycleStats
 from tori_shared_types import STREAM_SITE_GENERATED, MessageDraftedEvent
 
+from site_generator.builder import SiteBuilder, StaticSiteBuilder
 from site_generator.handler import SiteGenerationHandler
 from site_generator.quota import WeeklyQuota
 from site_generator.store import SiteDeploymentStore
@@ -26,9 +27,10 @@ EVENT_KWARGS = dict(
 )
 
 
-def _handler(redis_client, deployer=None, max_per_week=50):
+def _handler(redis_client, deployer=None, max_per_week=50, site_builder=None):
     return SiteGenerationHandler(
         deployer=deployer or StubDeployer(),
+        site_builder=site_builder or StaticSiteBuilder(),
         quota=WeeklyQuota(redis_client, max_per_week=max_per_week),
         deployment_store=SiteDeploymentStore(redis_client),
         idempotency_store=IdempotencyStore(redis_client),
@@ -94,3 +96,22 @@ def test_handler_propagates_deploy_errors_for_the_generic_retry_dlq_cycle():
 
     with pytest.raises(RuntimeError):
         handler(_fields(), CycleStats())
+
+
+def test_handler_deploys_the_html_produced_by_the_site_builder():
+    class RecordingBuilder(SiteBuilder):
+        def __init__(self):
+            self.calls = []
+
+        def build(self, place_id, display_name, phone_e164, gap_analysis):
+            self.calls.append((place_id, display_name, phone_e164, gap_analysis))
+            return "<html>generado</html>"
+
+    builder = RecordingBuilder()
+    deployer = StubDeployer()
+    handler = _handler(fakeredis.FakeRedis(), deployer=deployer, site_builder=builder)
+
+    handler(_fields(), CycleStats())
+
+    assert builder.calls == [("place-1", "Taquería El Buen Sazón", "+523312345678", "Sin web propia.")]
+    assert deployer.deploy_calls[0][0] == "<html>generado</html>"

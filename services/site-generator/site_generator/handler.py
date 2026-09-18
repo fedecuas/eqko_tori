@@ -4,11 +4,11 @@ from idempotency import IdempotencyStore
 from tori_seda_consumer import CycleStats
 from tori_shared_types import MessageDraftedEvent, SiteGeneratedEvent, site_generated_idempotency_key
 
+from .builder import SiteBuilder
 from .deploy import SiteDeployer, slug_for
 from .quota import WeeklyQuota
 from .store import SiteDeploymentStore
 from .streams import SiteGeneratedPublisher
-from .template import render_teaser_html
 
 
 class SiteGenerationHandler:
@@ -23,12 +23,14 @@ class SiteGenerationHandler:
     def __init__(
         self,
         deployer: SiteDeployer,
+        site_builder: SiteBuilder,
         quota: WeeklyQuota,
         deployment_store: SiteDeploymentStore,
         idempotency_store: IdempotencyStore,
         publisher: SiteGeneratedPublisher,
     ):
         self._deployer = deployer
+        self._site_builder = site_builder
         self._quota = quota
         self._deployment_store = deployment_store
         self._idempotency_store = idempotency_store
@@ -74,7 +76,7 @@ class SiteGenerationHandler:
         if not self._quota.try_consume():
             return None
 
-        html = render_teaser_html(event.display_name, event.phone_e164)
+        html = self._site_builder.build(event.place_id, event.display_name, event.phone_e164, event.gap_analysis)
         result = self._deployer.deploy(html, slug_for(event.place_id))
         self._deployment_store.record(event.place_id, result.url, result.deployment_id)
         return result.url

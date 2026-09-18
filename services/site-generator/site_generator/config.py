@@ -15,6 +15,19 @@ class Settings(BaseSettings):
     vercel_team_id: str | None = None
     vercel_project_name: str = "tori-leads"
 
+    # Generación del sitio con Gemini (builder.AiSiteBuilder). Sin GEMINI_API_KEY se usa la
+    # plantilla fija de siempre (StaticSiteBuilder).
+    gemini_api_key: str | None = None
+    site_gen_model: str = "gemini/gemini-2.5-flash"
+
+    # Fotos de Google Places. `google_places_api_key` es la key de SERVIDOR (metadatos de fotos).
+    # `google_places_public_key` queda EXPUESTA en el HTML público (<img src> le pide la foto en
+    # vivo a Google, los Términos prohíben guardarla): tiene que ser una key distinta, restringida
+    # por HTTP referrer (*.vercel.app) y solo a Places API. Sin las dos, el sitio sale sin fotos.
+    google_places_api_key: str | None = None
+    google_places_public_key: str | None = None
+    max_photos: int = 3
+
     # Aprobado en el documento de validación del Módulo 7 (CLAUDE.md sección 9,
     # 2026-09-18): 50 leads/semana, no escalar sin revisar de nuevo.
     weekly_quota: int = 50
