@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # Generación del sitio con Gemini (builder.AiSiteBuilder). Sin GEMINI_API_KEY se usa la
     # plantilla fija de siempre (StaticSiteBuilder).
     gemini_api_key: str | None = None
-    site_gen_model: str = "gemini/gemini-2.5-flash"
+    site_gen_model: str = "gemini/gemini-3.1-pro-preview"
 
     # Fotos de Google Places. `google_places_api_key` es la key de SERVIDOR (metadatos de fotos).
     # `google_places_public_key` queda EXPUESTA en el HTML público (<img src> le pide la foto en
@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # por HTTP referrer (*.vercel.app) y solo a Places API. Sin las dos, el sitio sale sin fotos.
     google_places_api_key: str | None = None
     google_places_public_key: str | None = None
-    max_photos: int = 3
+    max_photos: int = 5
 
     # Aprobado en el documento de validación del Módulo 7 (CLAUDE.md sección 9,
     # 2026-09-18): 50 leads/semana, no escalar sin revisar de nuevo.

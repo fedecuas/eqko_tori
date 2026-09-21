@@ -4,6 +4,8 @@ from site_generator.photos import GooglePlacesPhotosProvider, photo_media_url
 
 PLACE_BODY = {
     "googleMapsUri": "https://maps.google.com/?cid=1",
+    "primaryType": "taco_restaurant",
+    "primaryTypeDisplayName": {"text": "Restaurante de tacos", "languageCode": "es"},
     "photos": [
         {
             "name": f"places/p1/photos/REF{i}",
@@ -34,12 +36,14 @@ def test_fetch_parses_photos_attribution_and_place_uri_limited_to_max_photos():
 
     assert seen["url"] == "https://places.googleapis.com/v1/places/p1"
     assert seen["headers"]["x-goog-api-key"] == "server-key"
-    assert seen["headers"]["x-goog-fieldmask"] == "photos,googleMapsUri"
+    assert seen["headers"]["x-goog-fieldmask"] == "photos,googleMapsUri,primaryType,primaryTypeDisplayName"
     assert len(media.photos) == 3
     assert media.photos[0].name == "places/p1/photos/REF0"
     assert media.photos[0].attributions[0].display_name == "Autor 0"
     assert media.photos[0].google_maps_uri == "https://www.google.com/maps/photo/0"
     assert media.google_maps_uri == "https://maps.google.com/?cid=1"
+    assert media.primary_type == "taco_restaurant"
+    assert media.category_label == "Restaurante de tacos"
 
 
 def test_fetch_returns_no_photos_when_the_place_has_none():

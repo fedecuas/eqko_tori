@@ -33,9 +33,20 @@ son negociables sin volver a pasar por esa validación:
 - `quota.py` — `WeeklyQuota`, cupo semanal en Redis. A diferencia de `RateLimiter` en
   `dispatcher`, no bloquea/espera: agotar el cupo es una decisión de negocio, no un error
   transitorio.
-- `builder.py` — `AiSiteBuilder` (Gemini escribe el HTML, `compose_site` lo audita e inyecta
-  `noindex`, disclaimer, atribución y las fotos), `StaticSiteBuilder` (plantilla fija, sin
-  `GEMINI_API_KEY`). Verificado contra Gemini y Places reales (2026-09-18), en el navegador.
+- `design.py` — sistema de diseño: 5 temas (mexicano, oriental, café, bar, general) con paleta,
+  tipografías de Google Fonts y estilos base (`.wrap`, `.btn*`, barra de acción móvil). El tema
+  se elige por la categoría de Places, luego por el nombre. **Los colores los fija el sistema, no
+  el LLM**: `tests/test_design.py` verifica contraste AA de cada par, y `compose_site` rechaza
+  cualquier color literal en el CSS de Gemini (solo `var(--token)`).
+- `builder.py` — `AiSiteBuilder`: Gemini (`SITE_GEN_MODEL`, hoy `gemini-3.1-pro-preview`, ~2 min
+  por sitio) compone el layout; `compose_site` lo audita (sin scripts/forms/`<img>`/enlaces
+  externos/colores sueltos; SVG solo con lista blanca) y rechaza afirmaciones inventadas y
+  promesas de servicio (entrega, para llevar, menú...). El sistema inyecta título, fuentes,
+  `noindex`, barra de vista previa, disclaimer, atribución, fotos y la barra móvil
+  WhatsApp/Llamar. `StaticSiteBuilder` (plantilla fija) es el fallback y el modo sin
+  `GEMINI_API_KEY`. Verificado contra Gemini, Places y Vercel reales, en el navegador.
+  ⚠️ `gemini-3.1-pro-preview` es un modelo *preview* (puede cambiar o retirarse);
+  `gemini-2.5-pro` devolvió 404 con esta key.
 - `photos.py` — `GooglePlacesPhotosProvider`: pide en vivo solo los metadatos de las fotos
   (nombre del recurso + atribución). Un error de red degrada a "sin fotos", no pierde el lead.
   Necesita `GOOGLE_PLACES_API_KEY` (servidor) **y** `GOOGLE_PLACES_PUBLIC_KEY` (expuesta en el
@@ -65,7 +76,7 @@ python -m site_generator.expiry_main     # cron, correr una vez al día (ej. cro
 
 ## Tests
 
-66 tests, todo mockeado (`fakeredis`, `httpx.MockTransport`, un deployer y un LLM falsos) — nunca pega a
+151 tests, todo mockeado (`fakeredis`, `httpx.MockTransport`, un deployer y un LLM falsos) — nunca pega a
 Redis ni Vercel reales. Cubre: cupo semanal (independiente por semana ISO), reuso de deployment
 existente (no re-deploya en redelivery), degradación sin sitio cuando se agota el cupo (el evento
 igual se publica), la plantilla (disclaimer literal, `noindex`, sin texto de reviews, escapeo de

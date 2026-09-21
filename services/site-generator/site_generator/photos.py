@@ -28,6 +28,8 @@ class PlacePhoto:
 class PlaceMedia:
     photos: tuple[PlacePhoto, ...] = field(default_factory=tuple)
     google_maps_uri: str | None = None
+    primary_type: str | None = None
+    category_label: str | None = None
 
 
 class PhotosProvider(ABC):
@@ -50,8 +52,8 @@ def photo_media_url(photo_name: str, public_key: str, max_width_px: int = 800) -
 
 
 class GooglePlacesPhotosProvider(PhotosProvider):
-    """Pide en vivo (Place Details, campos `photos` y `googleMapsUri`) solo los metadatos de
-    las fotos: el nombre del recurso y la atribución obligatoria. Falla de red/HTTP degrada a
+    """Pide en vivo (Place Details) los metadatos de las fotos (nombre del recurso y atribución
+    obligatoria), el link a la ficha y la categoría del negocio (solo para elegir el tema visual). Falla de red/HTTP degrada a
     "sin fotos" en vez de perder el lead — las fotos mejoran el sitio, no son requisito."""
 
     def __init__(self, api_key: str, max_photos: int = 3, client: httpx.Client | None = None):
@@ -63,7 +65,7 @@ class GooglePlacesPhotosProvider(PhotosProvider):
         try:
             response = self._client.get(
                 f"{PLACES_BASE_URL}/places/{quote(place_id, safe='')}",
-                headers={"X-Goog-Api-Key": self._api_key, "X-Goog-FieldMask": "photos,googleMapsUri"},
+                headers={"X-Goog-Api-Key": self._api_key, "X-Goog-FieldMask": "photos,googleMapsUri,primaryType,primaryTypeDisplayName"},
             )
             response.raise_for_status()
             body = response.json()
@@ -72,7 +74,12 @@ class GooglePlacesPhotosProvider(PhotosProvider):
             return PlaceMedia()
 
         photos = tuple(_parse_photo(raw) for raw in body.get("photos", [])[: self._max_photos])
-        return PlaceMedia(photos=photos, google_maps_uri=body.get("googleMapsUri"))
+        return PlaceMedia(
+            photos=photos,
+            google_maps_uri=body.get("googleMapsUri"),
+            primary_type=body.get("primaryType"),
+            category_label=(body.get("primaryTypeDisplayName") or {}).get("text"),
+        )
 
 
 def _parse_photo(raw: dict) -> PlacePhoto:

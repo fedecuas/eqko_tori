@@ -160,7 +160,7 @@ resultado de negocio sin heredar esos riesgos.
 
 **Mitigación implementada:**
 - Capa A: el teaser usa solo datos factuales (nombre, teléfono); nunca el texto de una review. **Fotos de Places (agregado 2026-09-18, decisión del usuario):** sí se permiten, pero solo enlazadas en vivo — el `<img src>` apunta al endpoint de Google (`places.googleapis.com/v1/{photo}/media`) para que el browser del visitante las pida cada vez; nunca se descargan ni se hostean (los Términos prohíben cachear/guardar contenido de Places). Atribución obligatoria del autor + link a Google Maps, la inyecta el sistema, no el LLM (`site_generator/builder.py`). Requiere una key **pública** de Places restringida por HTTP referrer (`GOOGLE_PLACES_PUBLIC_KEY`), distinta de la key de servidor — va expuesta en el HTML.
-- **Sitio generado con Gemini (`AiSiteBuilder`):** Gemini escribe el HTML, pero nunca se despliega crudo — `compose_site` lo audita (sin `<script>`/`<form>`/`<img>` propios/enlaces externos/`url()` en CSS) y rechaza afirmaciones inventadas sobre el negocio ("por generaciones", "años de experiencia"); el sistema inyecta `noindex`, el disclaimer literal y la atribución. Si el HTML sigue inválido tras 2 intentos, degrada a la plantilla fija (`template.py`) — el lead nunca se pierde. Sin `GEMINI_API_KEY` usa la plantilla fija.
+- **Sitio generado con Gemini (`AiSiteBuilder`, rediseñado 2026-09-18):** el sistema fija tema (paleta con contraste AA verificado por tests, Google Fonts, tema por categoría de Places) y Gemini solo compone el layout con `var(--token)`. Nunca se despliega crudo — `compose_site` lo audita (sin `<script>`/`<form>`/`<img>` propios/enlaces externos/`url()`/colores literales; SVG con lista blanca) y rechaza afirmaciones inventadas y promesas de servicio (entrega, para llevar, menú, "por generaciones"). El sistema inyecta título, `noindex`, barra "vista previa", disclaimer literal, atribución de Google y la barra móvil WhatsApp/Llamar. Si el HTML sigue inválido tras 3 intentos, degrada a la plantilla fija (`template.py`) — el lead nunca se pierde. Sin `GEMINI_API_KEY` usa la plantilla fija. Modelo: `gemini-3.1-pro-preview` (preview; ~2 min por sitio).
 - Capa B: disclaimer literal acordado en la validación (`template.DISCLAIMER`), `noindex, nofollow` siempre, slug hash — no el nombre del negocio (`deploy.slug_for`) —, auto-expira a los 14 días (`expiry_main.py` borra el deployment de Vercel), el link lo manda un humano por WhatsApp igual que el mensaje hoy, y el gate de aprobación humana (`approval-gate`) revisa mensaje + sitio juntos antes de aprobar.
 
 **Dónde se inserta en el pipeline:**
@@ -204,9 +204,9 @@ Límite de 50/semana enforced en código (`WeeklyQuota`, ventana ISO por semana 
 alcanza con confiarlo a que el operador no dispare más runs.
 
 **Implementado y verificado de punta a punta contra Vercel real (2026-09-18)** —
-`services/site-generator` (25 tests, hoy 66 con builder + fotos) + cambios en cascada a `services/approval-gate` (consume
+`services/site-generator` (25 tests, hoy 151 con builder, diseño y fotos) + cambios en cascada a `services/approval-gate` (consume
 `site_generated`, propaga `landing_url`) y `services/dispatcher` (columna `landing_url` en
-Airtable/Sheets). 142 tests en el repo entero.
+Airtable/Sheets). 227 tests en el repo entero.
 
 Verificación real destapó **tres problemas** que ningún test mockeado iba a atrapar — detalle
 completo en `TORI-CREDENTIALS.md` sección Vercel:

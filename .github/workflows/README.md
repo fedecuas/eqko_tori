@@ -6,7 +6,7 @@ Corre en cada push/PR a `master`. Dos jobs independientes:
 
 - **python-tests** — instala los paquetes en orden de dependencia (`shared-types` →
   `seda-consumer`/`idempotency` → cada servicio con su extra `[test]`) y corre `pytest` en cada
-  directorio (142 tests en total: `seda-consumer`, `idempotency`, `extractor`, `agent-worker`,
+  directorio (227 tests en total: `seda-consumer`, `idempotency`, `extractor`, `agent-worker`,
   `site-generator`, `approval-gate`, `dispatcher`). Todas las suites mockean lo externo
   (fakeredis, `httpx.MockTransport`, `litellm`/`langfuse` mockeados) — no necesita ningún
   secret real configurado en GitHub.
