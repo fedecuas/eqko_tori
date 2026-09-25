@@ -4,6 +4,7 @@ from idempotency import IdempotencyStore
 from redis import Redis
 
 from .config import Settings
+from .denue_client import DenueProvider
 from .places_client import GooglePlacesProvider, PlacesProvider
 from .run_store import RunStore
 from .streams import StreamsPublisher
@@ -22,11 +23,14 @@ def get_redis() -> Redis:
 @lru_cache
 def get_places_provider() -> PlacesProvider:
     settings = get_settings()
+    if settings.extraction_provider == "denue":
+        if not settings.denue_token:
+            raise RuntimeError("EXTRACTION_PROVIDER=denue pero falta DENUE_TOKEN — ver TORI-CREDENTIALS.md.")
+        return DenueProvider(token=settings.denue_token)
     if not settings.google_places_api_key:
         raise RuntimeError(
             "GOOGLE_PLACES_API_KEY no está configurada — ver TORI-CREDENTIALS.md. "
-            "Apify como proveedor alternativo todavía no está implementado (Módulo 2 solo "
-            "cubre Places API)."
+            "Alternativa sin Google: EXTRACTION_PROVIDER=denue (INEGI). Apify todavía no está implementado."
         )
     return GooglePlacesProvider(api_key=settings.google_places_api_key)
 

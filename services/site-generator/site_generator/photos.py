@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from urllib.parse import quote
 
 import httpx
+from tori_shared_types import is_google_place_id
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,8 @@ class GooglePlacesPhotosProvider(PhotosProvider):
         self._client = client or httpx.Client(timeout=15.0)
 
     def fetch(self, place_id: str) -> PlaceMedia:
+        if not is_google_place_id(place_id):
+            return PlaceMedia()  # negocio de otra fuente (ej. DENUE): Google no lo conoce
         try:
             response = self._client.get(
                 f"{PLACES_BASE_URL}/places/{quote(place_id, safe='')}",

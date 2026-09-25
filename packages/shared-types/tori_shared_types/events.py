@@ -10,6 +10,15 @@ STREAM_SITE_GENERATED = "leadgen.site_generated"
 STREAM_LEAD_APPROVED = "leadgen.lead_approved"
 STREAM_LEAD_DISPATCHED = "leadgen.lead_dispatched"
 
+# `place_id` es el id del negocio en su fuente de origen. Los de Google Places van tal cual
+# ("ChIJ..."); los de DENUE (INEGI) llevan este prefijo para no colisionar y para que quien
+# necesite hablar con Google (fotos en site-generator) pueda saltárselos.
+DENUE_PLACE_ID_PREFIX = "denue:"
+
+
+def is_google_place_id(place_id: str) -> bool:
+    return not place_id.startswith(DENUE_PLACE_ID_PREFIX)
+
 
 class PlaceExtractedEvent(BaseModel):
     """Publicado por services/extractor, consumido por services/agent-worker."""

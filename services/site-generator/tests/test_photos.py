@@ -65,3 +65,12 @@ def test_photo_media_url_points_straight_at_google_with_the_public_key():
     assert url.startswith("https://places.googleapis.com/v1/places/p1/photos/REF0/media?")
     assert "maxWidthPx=800" in url
     assert "key=pub%20key%26x" in url
+
+
+def test_fetch_skips_google_for_places_that_come_from_another_source():
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise AssertionError("no debería llamar a Google con un id de DENUE")
+
+    media = _provider(handler).fetch("denue:1987686")
+
+    assert media.photos == ()

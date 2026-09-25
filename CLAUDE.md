@@ -206,7 +206,7 @@ alcanza con confiarlo a que el operador no dispare más runs.
 **Implementado y verificado de punta a punta contra Vercel real (2026-09-18)** —
 `services/site-generator` (25 tests, hoy 151 con builder, diseño y fotos) + cambios en cascada a `services/approval-gate` (consume
 `site_generated`, propaga `landing_url`) y `services/dispatcher` (columna `landing_url` en
-Airtable/Sheets). 227 tests en el repo entero.
+Airtable/Sheets). 268 tests en el repo entero.
 
 Verificación real destapó **tres problemas** que ningún test mockeado iba a atrapar — detalle
 completo en `TORI-CREDENTIALS.md` sección Vercel:
@@ -259,6 +259,12 @@ mocks:
   Search New), `StreamsPublisher` (`XADD` a `leadgen.place_extracted`), `RunStore` (estado en
   Redis mientras no exista Postgres). 11 tests, todo mockeado (`fakeredis`,
   `httpx.MockTransport`, stub de `PlacesProvider`) — nunca pega a APIs reales.
+- ✅ `DenueProvider` (INEGI DENUE, datos abiertos) como fuente alternativa a Google Places,
+  elegible con `EXTRACTION_PROVIDER=denue` (2026-09-24). Reintentos con backoff exponencial +
+  jitter porque la API real es intermitente (503 al azar); los errores de negocio llegan como texto
+  con HTTP 200. Limitaciones medidas en Huixquilucan: teléfono en ~36% de los negocios y casi
+  nunca igual al de Google, campo de sitio web casi siempre vacío (falsos positivos de "sin
+  sitio"), sin fotos. Detalle en `services/extractor/README.md`.
 - ⬜ Apify como proveedor alternativo: la interfaz `PlacesProvider` ya lo contempla, falta la
   implementación.
 - ⬜ Sin correr contra Redis/Places API reales todavía — bloqueado por las credenciales del
